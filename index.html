@@ -471,25 +471,88 @@ function build(){
   for(let a=0;a<3;a++)for(let b=0;b<3;b++){const x=A+46+a*92,z=B+46+b*92,fi=b==2?0:b==0?1:a==0?2:a==2?3:0,g=house(x0,z0,x,z,fi,!(a==1&&b==1));if(g!==undefined)(fi<2?gx:gz).push(g)}
   gx.sort((u,v)=>u-v);gz.sort((u,v)=>u-v);
   if(hOn)hedge2(x0,z0,'#4f9d5a',gx,gz);else lowWall(x0,z0,'#d8d2c4',gx,gz)};
- const tower=(x,z,w,h,c)=>{const t2=h*.14,t3=h>200?h*.1:0,top=h+t2+t3+.6;add(bld,x,h/2+.6,z,w,h,w,C.set(c));add(bld,x,h+t2/2+.6,z,w*.72,t2,w*.72,C.set(c));if(t3)add(bld,x,h+t2+t3/2+.6,z,w*.45,t3,w*.45,C.set(c));
-  // 外壁に窓パネルを追加。高さに応じて数を制限し、描画負荷を抑える。
-  const rows=Math.min(10,Math.max(2,Math.floor(h/24))),cols=5,wy=10,ww=Math.min(13,w*.105),glass=['#8eafc4','#6f91a8','#b5c9d5'];
-  for(let r=0;r<rows;r++){const yy=10+r*(Math.max(18,h-22)/rows);for(let q=0;q<cols;q++){const off=(q-(cols-1)/2)*(w*.145);const gc=glass[(q+r)%glass.length];
-   add(roofs,x+off,yy,z+w/2+.8,ww,wy,1.2,C.set(gc));add(roofs,x+off,yy,z-w/2-.8,ww,wy,1.2,C.set(gc));
-   add(roofs,x+w/2+.8,yy,z+off,1.2,wy,ww,C.set(gc));add(roofs,x-w/2-.8,yy,z+off,1.2,wy,ww,C.set(gc));}}
-  add(roofs,x,top+1.5,z,w*.5,3,w*.5,C.set('#d5d8dc'));add(roofs,x-w*.23,top+4,z,w*.12,5,w*.12,C.set('#858d96'));add(roofs,x+w*.2,top+4,z,w*.1,5,w*.1,C.set('#858d96'));if(h>180)add(roofs,x,top+24,z,2.5,44,2.5,C.set('#c8ccd0'));
+ // Detailed architectural facades: continuous glass bands, recessed panes and structural mullions.
+ const facade=(x,z,w,d,h,baseY,style='office')=>{
+  const glass=style==='mall'?'#29485d':style==='tower'?'#42677f':'#547184';
+  const frame=style==='mall'?'#d7d9d5':'#c7d0d4';
+  const floorH=style==='mall'?7.5:style==='tower'?8.5:7.2;
+  const colsLong=Math.max(3,Math.floor(w/(style==='mall'?10:style==='tower'?13:12)));
+  const colsShort=Math.max(2,Math.floor(d/(style==='mall'?10:style==='tower'?13:12)));
+  const rows=Math.max(2,Math.floor((h-5)/floorH));
+  // Main glazed faces on all four sides. Panes are separated by real frame strips,
+  // not duplicated pairs of floating window boxes.
+  for(let r=0;r<rows;r++){
+   const yy=baseY+3.2+r*floorH;
+   if(yy+floorH*.62>baseY+h-1) continue;
+   for(let c=0;c<colsLong;c++){
+    const xx=x-w/2+(c+.5)*w/colsLong, ww=w/colsLong-1.35, hh=floorH*.62;
+    for(const side of [-1,1]){
+     add(roofs,xx,yy+hh/2,z+side*(d/2+.16),ww,hh,.32,C.set(glass));
+     add(roofs,xx,yy+hh/2,z+side*(d/2+.34),.65,hh+.6,.22,C.set(frame));
+    }
+   }
+   for(let c=0;c<colsShort;c++){
+    const zz=z-d/2+(c+.5)*d/colsShort, dd=d/colsShort-1.35, hh=floorH*.62;
+    for(const side of [-1,1]){
+     add(roofs,x+side*(w/2+.16),yy+hh/2,zz,.32,hh,dd,C.set(glass));
+     add(roofs,x+side*(w/2+.34),yy+hh/2,zz,.22,hh+.6,.65,C.set(frame));
+    }
+   }
+   // Strong floor slab / spandrel line gives each storey a readable rhythm.
+   add(roofs,x,yy+floorH*.78,z,w+.8,.65,d+.8,C.set(style==='mall'?'#aeb8bd':'#d8dcdd'));
+  }
+  // Corner piers and a crisp roof parapet.
+  for(const sx of [-1,1])for(const sz of [-1,1])add(roofs,x+sx*(w/2-.8),baseY+h/2,z+sz*(d/2-.8),1.8,h,1.8,C.set(frame));
+ };
+ const tower=(x,z,w,h,c)=>{const t2=h*.14,t3=h>200?h*.1:0,top=h+t2+t3+.6;add(bld,x,h/2+.6,z,w,h,w,C.set(c));facade(x,z,w,w,h,.6,'tower');add(bld,x,h+t2/2+.6,z,w*.72,t2,w*.72,C.set(c));if(t3)add(bld,x,h+t2+t3/2+.6,z,w*.45,t3,w*.45,C.set(c));
+  add(roofs,x,top+1.5,z,w*.5,3,w*.5,C.set('#d5d8dc'));if(h>180)add(roofs,x,top+24,z,2.5,44,2.5,C.set('#c8ccd0'));
   add(trunks,x+w*.3,top+6,z-w*.3,5,9,5,C.set('#8a6a4a'));if(h>150&&hash(Math.floor(x),Math.floor(z))<.5){add(roofs,x-w*.1,top+14,z+w*.3,w*.5,14,1.5,C.set(pk(['#e63946','#ffd23f','#2a9d8f','#f4f4f4'])));add(roofs,x-w*.3,top+5,z+w*.3,1.5,10,1.5,C.set('#555555'));add(roofs,x+w*.1,top+5,z+w*.3,1.5,10,1.5,C.set('#555555'))}};
  const towers=(i,j,x0,z0,f)=>{for(let a=0;a<2;a++)for(let b=0;b<2;b++){const w=136,x=x0+80+a*140,z=z0+80+b*140,h=(70+hash(i*2+a,j*2+b)*300)*f;tower(x,z,w,h,pk(GLS));shopDoors(x,z,w,a?1:-1,b?1:-1)}};
  const offices=(i,j,x0,z0)=>{lot(x0,z0,'#4a4d55');lowWall(x0,z0,'#cfcac0',[],[]);const h=45+R(0,70),c=pk(GLS);
-  add(bld,x0+150,h/2+.6,z0+90,200,h,110,C.set(c));add(roofs,x0+150,h+2,z0+90,190,3,100,C.set('#d5d8dc'));add(roofs,x0+120,h+8,z0+90,30,10,24,C.set('#bbbbbb'));
-  for(let r=0;r<Math.min(4,Math.floor(h/12));r++)for(let q=0;q<7;q++){const xx=x0+72+q*26,yy=8+r*12;add(roofs,xx,yy,z0+145.8,15,7,1.2,C.set('#7898ad'));add(roofs,xx,yy,z0+34.2,15,7,1.2,C.set('#7898ad'))}
+  add(bld,x0+150,h/2+.6,z0+90,200,h,110,C.set(c));facade(x0+150,z0+90,200,110,h,.6,'office');add(roofs,x0+150,h+2,z0+90,204,3,114,C.set('#d5d8dc'));add(roofs,x0+120,h+8,z0+90,30,10,24,C.set('#bbbbbb'));
   carRow(x0+40,z0+180,7,38);carRow(x0+40,z0+250,7,38);palm(x0+20,z0+160,38);palm(x0+280,z0+160,34)};
- const mall=(i,j,x0,z0)=>{lot(x0,z0,'#4a4d55');lowWall(x0,z0,'#cfcac0',[],[]);const c=pk(STU),sc=pk(['#d62828','#1d4e89','#2a9d8f','#e9a820']);
-  add(bld,x0+150,8.6,z0+34,258,16,32,C.set(c));add(roofs,x0+150,17.5,z0+34,262,2,36,C.set('#8d8a82'));add(roofs,x0+150,12,z0+50.4,250,5,1.5,C.set(sc));add(roofs,x0+150,9.5,z0+53,250,1.6,6,C.set(pk(['#e0524a','#2f7fc1','#3aa675'])));
-  // 店舗正面にガラス面と入口を追加
-  for(let q=0;q<9;q++){const xx=x0+30+q*30;add(roofs,xx,8.8,z0+50.9,24,10,1.1,C.set('#8fb5c9'))}add(roofs,x0+150,6.5,z0+51.8,18,8,.8,C.set('#d8e5eb'));
-  carRow(x0+30,z0+110,11,22);carRow(x0+30,z0+200,11,22);carRow(x0+30,z0+260,11,22);
-  add(trunks,x0+262,22,z0+150,1.5,44,1.5,C.set('#555555'));add(roofs,x0+262,50,z0+150,3,16,22,C.set(sc))};
+ const mall=(i,j,x0,z0)=>{
+  lot(x0,z0,'#555b60');
+  // A real two-storey retail complex with a broad glass curtain wall and a clear entrance.
+  const mx=x0+150,mz=z0+112,mw=226,md=132,mh=31;
+  add(bld,mx,mh/2+.7,mz,mw,mh,md,C.set('#d9d8d1'));
+  facade(mx,mz,mw,md,mh,.7,'mall');
+  // Solid stone base, upper fascia and roof parapet.
+  add(roofs,mx,3.4,mz,mw+3,5,md+3,C.set('#b9b9b1'));
+  add(roofs,mx,mh+1.8,mz,mw+8,3.2,md+8,C.set('#e5e2d9'));
+  add(roofs,mx,23.8,mz-md/2-.9,mw-12,7,1.5,C.set('#203b4e'));
+  // Double-height central entrance, dark glass doors and canopy.
+  add(roofs,mx,13.2,mz-md/2-1.2,35,18,1.1,C.set('#152c3a'));
+  add(roofs,mx,13.2,mz-md/2-1.95,29,16,.35,C.set('#7da9bd'));
+  add(roofs,mx,23,mz-md/2-8,58,2.2,15,C.set('#e8e5dc'));
+  // Shopfront divisions and restrained signage panels.
+  for(let q=-4;q<=4;q++){
+   const xx=mx+q*24;
+   add(roofs,xx,13,mz-md/2-1.7,1.1,17,.45,C.set('#d4d9d8'));
+   add(roofs,xx,26.5,mz-md/2-1.8,18,2.4,.5,C.set('#f1eee6'));
+  }
+  // Rooftop mechanical plant, skylights and service access.
+  for(let q=0;q<5;q++){
+   const xx=mx-82+q*41;
+   add(roofs,xx,33.5,mz+30,18,4,15,C.set('#aeb5b7'));
+   add(roofs,xx,36,mz+30,13,1,10,C.set('#697b84'));
+  }
+  // Landscaped forecourt and parking bays rather than rows of toy-like cars.
+  add(bases,mx,0.9,z0+235,260,.3,78,C.set('#555b60'));
+  for(let q=0;q<10;q++){
+   const xx=x0+32+q*26;
+   add(roofs,xx,1.1,z0+202,1.2,.18,54,C.set('#e8e6df'));
+  }
+  carRow(x0+42,z0+218,8,28);
+  for(const xx of [x0+24,x0+276]){
+   add(hed,xx,2.5,z0+112,5,5,5,C.set('#6e9b65'));
+   add(trunks,xx,8,z0+112,1.2,13,1.2,C.set('#6b5845'));
+   add(trees,xx,16,z0+112,9,8,9,C.set('#477d55'));
+  }
+  // Mall name sign, mounted on the upper front fascia.
+  add(roofs,mx,28.5,mz-md/2-2.2,74,5,.8,C.set('#1e3545'));
+  add(roofs,mx,28.5,mz-md/2-2.75,67,2.8,.35,C.set('#e8e8df'));
+ };
  const gas=(i,j,x0,z0)=>{lot(x0,z0,'#4a4d55');lowWall(x0,z0,'#cfcac0',[],[]);const sc=pk(['#d62828','#1d4e89','#f2b705']);
   add(roofs,x0+110,20,z0+150,90,3,50,C.set('#f2f2f2'));add(roofs,x0+110,21,z0+176.5,90,3.5,1.5,C.set(sc));
   for(const sx of[-36,36])for(const sz of[-16,16])add(roofs,x0+110+sx,10,z0+150+sz,2.5,20,2.5,C.set('#c8c8c8'));
@@ -497,7 +560,7 @@ function build(){
   add(bld,x0+235,8.6,z0+75,40,16,48,C.set(pk(STU)));add(roofs,x0+235,17.5,z0+75,43,2,51,C.set('#8d8a82'));
   add(trunks,x0+60,24,z0+265,1.5,48,1.5,C.set('#555555'));add(roofs,x0+60,52,z0+265,14,16,2.5,C.set(sc))};
  const apts=(i,j,x0,z0)=>{lot(x0,z0,'#cfd6b8');lowWall(x0,z0,'#d8d2c4',[],[]);const c=pk(STU),H=26+R(0,8);
-  add(bld,x0+150,H/2+.6,z0+50,256,H,56,C.set(c));add(bld,x0+45,H/2+.6,z0+170,50,H,176,C.set(c));add(bld,x0+255,H/2+.6,z0+170,50,H,176,C.set(c));
+  add(bld,x0+150,H/2+.6,z0+50,256,H,56,C.set(c));facade(x0+150,z0+50,256,56,H,.6,'office');add(bld,x0+45,H/2+.6,z0+170,50,H,176,C.set(c));facade(x0+45,z0+170,50,176,H,.6,'office');add(bld,x0+255,H/2+.6,z0+170,50,H,176,C.set(c));facade(x0+255,z0+170,50,176,H,.6,'office');
   for(const [x,z,w,d] of[[x0+150,z0+50,260,60],[x0+45,z0+170,54,180],[x0+255,z0+170,54,180]])add(roofs,x,H+2,z,w,3,d,C.set('#cfcac0'));
   add(roofs,x0+150,.85,z0+185,60,.4,40,C.set('#4fc3e8'));palm(x0+90,z0+130,40);palm(x0+210,z0+130,36);palm(x0+110,z0+240,34);palm(x0+190,z0+245,42)};
  const sig=(X,Z)=>{SIGSET.add(Math.round(X/CELL)+','+Math.round(Z/CELL));
